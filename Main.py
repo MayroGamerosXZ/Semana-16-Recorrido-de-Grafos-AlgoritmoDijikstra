@@ -1,68 +1,62 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 import folium
-from datetime import datetime
 import webbrowser
 import tempfile
-import os
 from typing import List
 from Packpage import Package
 from Graph import Graph
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 
-
 class DeliveryRoutePlanner:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("Delivery Route Planner")
+        self.root.title("🚚 Delivery Route Planner")
         self.root.geometry("1200x800")
+        self.root.configure(bg="#f0f4f7")  # Fondo suave
 
         self.packages: List[Package] = []
         self.graph = Graph()
         self.geocoder = Nominatim(user_agent="delivery_route_planner")
 
+        # Setup styles
+        self.style = ttk.Style()
+        self.style.configure("TLabel", font=("Segoe UI", 12))
+        self.style.configure("TButton", font=("Segoe UI", 11), padding=6)
+        self.style.configure("Treeview.Heading", font=("Segoe UI", 12, "bold"))
+
         self.setup_ui()
 
     def setup_ui(self):
-        # Create main frames
-        self.left_frame = ttk.Frame(self.root, padding="10")
-        self.right_frame = ttk.Frame(self.root, padding="10")
-        self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        # Create main frames with border color
+        self.left_frame = tk.Frame(self.root, bg="#ffffff", highlightbackground="#3498db", highlightthickness=3)
+        self.right_frame = tk.Frame(self.root, bg="#ffffff", highlightbackground="#2ecc71", highlightthickness=3)
+        self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-        # Package input form
         self.setup_package_form()
-
-        # Package list
         self.setup_package_list()
-
-        # Map view (using folium)
         self.setup_map_view()
-
-        # Route planning controls
         self.setup_route_controls()
 
     def setup_package_form(self):
-        form_frame = ttk.LabelFrame(self.left_frame, text="Add Package", padding="10")
+        form_frame = ttk.LabelFrame(self.left_frame, text="➕ Add Package", padding="10")
         form_frame.pack(fill=tk.X, pady=5)
 
-        # Address input
-        ttk.Label(form_frame, text="Address:").grid(row=0, column=0, sticky=tk.W)
+        ttk.Label(form_frame, text="Address:").grid(row=0, column=0, sticky=tk.W, pady=5)
         self.address_var = tk.StringVar()
-        ttk.Entry(form_frame, textvariable=self.address_var, width=40).grid(row=0, column=1, padx=5)
+        ttk.Entry(form_frame, textvariable=self.address_var, width=40).grid(row=0, column=1, padx=5, pady=5)
 
-        # Priority selection
-        ttk.Label(form_frame, text="Priority:").grid(row=1, column=0, sticky=tk.W)
+        ttk.Label(form_frame, text="Priority:").grid(row=1, column=0, sticky=tk.W, pady=5)
         self.priority_var = tk.IntVar(value=2)
         for i, pri in enumerate(["High", "Medium", "Low"]):
-            ttk.Radiobutton(form_frame, text=pri, variable=self.priority_var, value=i + 1).grid(row=1, column=i + 1)
+            ttk.Radiobutton(form_frame, text=pri, variable=self.priority_var, value=i + 1).grid(row=1, column=i + 1, pady=5)
 
-        # Add button
         ttk.Button(form_frame, text="Add Package", command=self.add_package).grid(row=2, column=1, pady=10)
 
     def setup_package_list(self):
-        list_frame = ttk.LabelFrame(self.left_frame, text="Package List", padding="10")
+        list_frame = ttk.LabelFrame(self.left_frame, text="📦 Package List", padding="10")
         list_frame.pack(fill=tk.BOTH, expand=True, pady=5)
 
         columns = ("ID", "Address", "Priority", "Status")
@@ -70,30 +64,28 @@ class DeliveryRoutePlanner:
 
         for col in columns:
             self.package_tree.heading(col, text=col)
-            self.package_tree.column(col, width=100)
+            self.package_tree.column(col, width=120)
 
         self.package_tree.pack(fill=tk.BOTH, expand=True)
 
     def setup_map_view(self):
-        self.map_frame = ttk.LabelFrame(self.right_frame, text="Route Map", padding="10")
+        self.map_frame = ttk.LabelFrame(self.right_frame, text="🗺️ Route Map", padding="10")
         self.map_frame.pack(fill=tk.BOTH, expand=True)
 
-        # Initial map creation
         self.update_map()
 
     def setup_route_controls(self):
         control_frame = ttk.Frame(self.right_frame, padding="10")
         control_frame.pack(fill=tk.X, pady=5)
 
-        ttk.Button(control_frame, text="Calculate Route", command=self.calculate_route).pack(side=tk.LEFT, padx=5)
-        ttk.Button(control_frame, text="Clear All", command=self.clear_all).pack(side=tk.LEFT, padx=5)
+        ttk.Button(control_frame, text="🚗 Calculate Route", command=self.calculate_route).pack(side=tk.LEFT, padx=5)
+        ttk.Button(control_frame, text="🗑️ Clear All", command=self.clear_all).pack(side=tk.LEFT, padx=5)
 
     def add_package(self):
         address = self.address_var.get()
         if not address:
             return
 
-        # Geocode address
         try:
             location = self.geocoder.geocode(address)
             if location is None:
@@ -113,7 +105,7 @@ class DeliveryRoutePlanner:
             self.address_var.set("")
 
         except Exception as e:
-            tk.messagebox.showerror("Error", f"Error adding package: {str(e)}")
+            messagebox.showerror("Error", f"Error adding package: {str(e)}")
 
     def update_package_list(self):
         for item in self.package_tree.get_children():
@@ -135,7 +127,6 @@ class DeliveryRoutePlanner:
 
         m = folium.Map(location=center, zoom_start=13)
 
-        # Add markers for all packages
         for pkg in self.packages:
             folium.Marker(
                 [pkg.latitude, pkg.longitude],
@@ -143,21 +134,20 @@ class DeliveryRoutePlanner:
                 icon=folium.Icon(color='red' if pkg.priority == 1 else 'blue')
             ).add_to(m)
 
-        # Draw route if available
         if route:
             coordinates = [(pkg.latitude, pkg.longitude) for pkg in route]
-            folium.PolyLine(coordinates, weight=2, color='red').add_to(m)
+            folium.PolyLine(coordinates, weight=4, color='red').add_to(m)
 
-        # Save map to temporary file and display
         _, temp_path = tempfile.mkstemp(suffix='.html')
         m.save(temp_path)
         webbrowser.open(f'file://{temp_path}')
 
     def calculate_route(self):
         if len(self.packages) < 2:
+            messagebox.showinfo("Info", "Add at least two packages to calculate a route.")
             return
 
-        # Create graph
+        # Recreate the graph
         self.graph = Graph()
 
         # Add edges between all packages
@@ -170,24 +160,40 @@ class DeliveryRoutePlanner:
                     ).kilometers
                     self.graph.add_edge(pkg1.id, pkg2.id, distance)
 
-        # Calculate optimal route
         start_pkg = self.packages[0]
-        route = []
+        route = [start_pkg]
         current_pkg = start_pkg
         unvisited = set(pkg.id for pkg in self.packages[1:])
 
         while unvisited:
-            _, path = min(
-                (self.graph.get_shortest_path(current_pkg.id, pkg_id) for pkg_id in unvisited),
-                key=lambda x: x[1]
-            )
-            next_pkg_id = path[1] if len(path) > 1 else path[0]
-            next_pkg = next(pkg for pkg in self.packages if pkg.id == next_pkg_id)
-            route.append(next_pkg)
-            unvisited.remove(next_pkg_id)
-            current_pkg = next_pkg
+            nearest_pkg = None
+            nearest_distance = float('inf')
 
-        # Update map with route
+            # Manually find nearest unvisited neighbor
+            for pkg_id in unvisited:
+                path = self.graph.get_shortest_path(current_pkg.id, pkg_id)
+                if not path or len(path) < 2:
+                    continue
+                next_pkg_id = path[1]  # Next hop in the path
+                next_pkg = next(pkg for pkg in self.packages if pkg.id == pkg_id)
+
+                # Calculate actual geodesic distance to this node
+                distance = geodesic(
+                    (current_pkg.latitude, current_pkg.longitude),
+                    (next_pkg.latitude, next_pkg.longitude)
+                ).kilometers
+
+                if distance < nearest_distance:
+                    nearest_distance = distance
+                    nearest_pkg = next_pkg
+
+            if nearest_pkg is None:
+                break  # No reachable unvisited packages
+
+            route.append(nearest_pkg)
+            unvisited.remove(nearest_pkg.id)
+            current_pkg = nearest_pkg
+
         self.update_map(route)
 
     def clear_all(self):
