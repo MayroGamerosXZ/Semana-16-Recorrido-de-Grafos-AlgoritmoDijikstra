@@ -6,9 +6,9 @@ import webbrowser
 import tempfile
 import os
 from typing import List
-from package import Package
-from graph import Graph
-from geopy.geocoding import Nominatim
+from Package import Package
+from Graph import Graph
+from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 
 
