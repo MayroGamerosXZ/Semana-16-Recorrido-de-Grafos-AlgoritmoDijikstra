@@ -9,27 +9,33 @@ from Graph import Graph
 from geopy.geocoders import Nominatim
 from geopy.distance import geodesic
 
+# Clase principal para la planificación de rutas de entrega
 class DeliveryRoutePlanner:
     def __init__(self):
+        # Inicializa la ventana principal de la aplicación
         self.root = tk.Tk()
         self.root.title("🚚 Delivery Route Planner")
         self.root.geometry("1200x800")
         self.root.configure(bg="#f0f4f7")  # Fondo suave
 
+        # Lista de paquetes a entregar
         self.packages: List[Package] = []
+        # Grafo para calcular rutas
         self.graph = Graph()
+        # Geocodificador para convertir direcciones en coordenadas
         self.geocoder = Nominatim(user_agent="delivery_route_planner")
 
-        # Setup styles
+        # Configuración de estilos para la interfaz
         self.style = ttk.Style()
         self.style.configure("TLabel", font=("Segoe UI", 12))
         self.style.configure("TButton", font=("Segoe UI", 11), padding=6)
         self.style.configure("Treeview.Heading", font=("Segoe UI", 12, "bold"))
 
+        # Llama al método para construir la interfaz de usuario
         self.setup_ui()
 
     def setup_ui(self):
-        # Create main frames with border color
+        # Crea los marcos principales con color de borde
         self.left_frame = tk.Frame(self.root, bg="#ffffff", highlightbackground="#3498db", highlightthickness=3)
         self.right_frame = tk.Frame(self.root, bg="#ffffff", highlightbackground="#2ecc71", highlightthickness=3)
         self.left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -120,10 +126,13 @@ class DeliveryRoutePlanner:
             ))
 
     def update_map(self, route=None):
-        if not self.packages:
-            center = [0, 0]
-        else:
+        # Si hay una ruta, centra el mapa en el primer punto de la ruta
+        if route and len(route) > 0:
+            center = [route[0].latitude, route[0].longitude]
+        elif self.packages:
             center = [self.packages[0].latitude, self.packages[0].longitude]
+        else:
+            center = [0, 0]
 
         m = folium.Map(location=center, zoom_start=13)
 
